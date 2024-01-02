@@ -19,7 +19,6 @@ class DeepLinkHandler {
 
   static destination(Map message, {bool isAccepted = false}) async {
     debugPrint("Inside deeplink destination ---------------> ${message.toString()}");
-
   }
 
   /// Nav **********************************************************************

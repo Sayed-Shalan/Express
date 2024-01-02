@@ -1,11 +1,11 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:express/servers_sheet.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:webviewx/webviewx.dart';
-
 import 'fcm/fcm_helper.dart';
 import 'fcm/local_notifications_helper.dart';
 import 'firebase_helper.dart';
@@ -81,17 +81,20 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
 
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late WebViewXController webViewController;
   bool loading = true;
   Server selectedServer = Server.track1;
-  String? customText;
+  String? customText, username;
+  final dio = Dio();
 
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+  }
+  @override
   Widget build(BuildContext context) {
-
     return WillPopScope(child: Scaffold(
-      key: _scaffoldKey,
         resizeToAvoidBottomInset: true,
         appBar: AppBar(backgroundColor: const Color(0xff327dbe),centerTitle: true,titleSpacing: 100, actions: [
           InkWell(
@@ -113,8 +116,8 @@ class _MyHomePageState extends State<MyHomePage> {
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height - kToolbarHeight,
               onWebResourceError: (_){},
-              onPageFinished: (_){},
-              onPageStarted: (_){},
+              onPageStarted: _handlePageChanged,
+
             ),
           ),
         )
@@ -123,6 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
         webViewController.goBack();
         return Future.value(false);
       }
+      if(username?.isNotEmpty ?? false) await _removeToken(username);
       SystemChannels.platform.invokeMethod('SystemNavigator.pop');
       return Future.value(false);
     });
@@ -149,6 +153,46 @@ class _MyHomePageState extends State<MyHomePage> {
     await webViewController.clearCache();
     webViewController.loadContent(selectedServer == Server.custom? customText! : selectedServer.server, SourceType.url);
     setState(() {});
+  }
+  _handlePageChanged(String url){
+    debugPrint("URL Changed --------> $url");
+    final uri = Uri.parse(url);
+
+    if (uri.host.contains('expressit') && uri.queryParameters.containsKey('welcome')) _sendToken(uri.queryParameters['welcome']);
+    if (uri.host.contains('expressit') && uri.queryParameters.containsKey('goodbye')) _removeToken(uri.queryParameters['goodbye']);
+  }
+  _sendToken(String? username)async{
+    if(username?.isEmpty ?? true) return;
+    this.username = username;
+    var apiUrl = selectedServer.server+'/api.php';
+
+    var token = await FirebaseMessaging.instance.getToken();
+    debugPrint("On Send Token --------> $token, $username");
+
+    var response = await dio.get(apiUrl, queryParameters: {
+      "key":'6502c5294e9acf878253a6e88662b64a4031F830CCD5FB2237386E003FD0D9F685FBBB70',
+      "cmd": 'savetoken',
+      "username": username,
+      "token": token
+    });
+    debugPrint("Send token Status --------> ${response.statusCode ?? 400}");
+
+  }
+  _removeToken(String? username)async{
+    if(username?.isEmpty ?? true) return;
+    this.username = null;
+    var apiUrl = selectedServer.server+'/api.php';
+    var token = await FirebaseMessaging.instance.getToken();
+    debugPrint("On Remove Token --------> $token, $username");
+
+    var response = await dio.get(apiUrl, queryParameters: {
+      "key":'6502c5294e9acf878253a6e88662b64a4031F830CCD5FB2237386E003FD0D9F685FBBB70',
+      "cmd": 'removetoken',
+      "username": username,
+      "token": token
+    });
+    debugPrint("Remove token Status --------> ${response.statusCode ?? 400}");
+
   }
 }
 

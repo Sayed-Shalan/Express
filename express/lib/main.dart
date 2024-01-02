@@ -1,5 +1,7 @@
+import 'package:express/servers_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:webviewx/webviewx.dart';
 
 void main() {
@@ -19,15 +21,13 @@ class MyApp extends StatelessWidget {
         primaryColor: const Color(0xFFbd751b),
         primaryColorDark: const Color(0xFFbd751b)
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -35,23 +35,42 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
 
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late WebViewXController webViewController;
   bool loading = true;
+  Server selectedServer = Server.track1;
+  String? customText;
 
   @override
   Widget build(BuildContext context) {
 
     return WillPopScope(child: Scaffold(
-        appBar: AppBar(backgroundColor: const Color(0xff327dbe),centerTitle: true,titleSpacing: 100,title: Image.asset('images/logo.png', fit: BoxFit.contain,),),
-        body: WebViewX(
-          initialContent: 'http://track1.expressit.com.sa/mobile/index.php',
-          initialSourceType: SourceType.url,
-          onWebViewCreated: (controller) => webViewController = controller,
+      key: _scaffoldKey,
+        resizeToAvoidBottomInset: true,
+        appBar: AppBar(backgroundColor: const Color(0xff327dbe),centerTitle: true,titleSpacing: 100, actions: [
+          InkWell(
+            onTap: ()=> _openOptionsSheet(context),
+            child: const Padding(
+              padding: EdgeInsetsDirectional.only(end: 16),
+              child: Icon(Icons.more_vert, color: Colors.white,),
+            ),
+          )
+        ],title: Image.asset('images/logo.png', fit: BoxFit.contain,),),
+        body: SizedBox(
           width: MediaQuery.of(context).size.width,
-          height: MediaQuery.of(context).size.height - kToolbarHeight,
-          onWebResourceError: (_){},
-          onPageFinished: (_){},
-          onPageStarted: (_){},
+          height: MediaQuery.of(context).size.height,
+          child: SingleChildScrollView(
+            child: WebViewX(
+              initialContent: selectedServer == Server.custom? customText! : selectedServer.server,
+              initialSourceType: SourceType.url,
+              onWebViewCreated: (controller) => webViewController = controller,
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height - kToolbarHeight,
+              onWebResourceError: (_){},
+              onPageFinished: (_){},
+              onPageStarted: (_){},
+            ),
+          ),
         )
     ), onWillPop: ()async{
       if(await webViewController.canGoBack()){
@@ -63,5 +82,35 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+/// Logic ***********************************************************************
+  _openOptionsSheet(BuildContext context)async{
+    dynamic result = await showModalBottomSheet(context: context, builder: (_)=> ServersSheet(init: selectedServer, customText: customText?.replaceAll('https://', ''),), isScrollControlled: true, useSafeArea: true);
+    if(result == null) return;
+    // if(selectedServer == result['server']) return;
+    selectedServer = result['server'];
+    if(selectedServer == Server.custom){
+      customText = result['customText'];
+    }
+    Fluttertoast.showToast(
+      msg: 'جاري تحميل الرابط',
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 1,
+      backgroundColor: Colors.black,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+    await webViewController.clearCache();
+    webViewController.loadContent(selectedServer == Server.custom? customText! : selectedServer.server, SourceType.url);
+    setState(() {});
+  }
+}
 
+enum Server{
+  track1(server: 'https://track1.expressit.com.sa/mobile', title: 'سيرفر 1 - Server 1'),
+  track2(server: 'https://track2.expressit.com.sa/mobile', title: 'سيرفر 2 - Server 2'),
+  track3(server: 'https://track3.expressit.com.sa/mobile', title: 'سيرفر 3 - Server 3'),
+  custom(server: '', title: 'مخصص - Custom');
+  final String server, title;
+  const Server({required this.server, required this.title});
 }

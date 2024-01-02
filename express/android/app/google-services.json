@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1027939228158",
+    "project_id": "express-e4c75",
+    "storage_bucket": "express-e4c75.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027939228158:android:fa212a495e094c8e5808af",
+        "android_client_info": {
+          "package_name": "com.expresstracking.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe91LpMiXSUiadDb_2Agb39cwC_NkWE5s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

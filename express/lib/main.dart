@@ -1,10 +1,56 @@
+import 'dart:io';
 import 'package:express/servers_sheet.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:webviewx/webviewx.dart';
 
-void main() {
+import 'fcm/fcm_helper.dart';
+import 'fcm/local_notifications_helper.dart';
+import 'firebase_helper.dart';
+
+
+/// Global Vars ******************************
+final messaging = FirebaseMessaging.instance;
+// FCM background callback
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+}
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
+
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = MyHttpOverrides();
+  await FirebaseHelper.init();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent, // Set status bar color to transparent
+      statusBarIconBrightness: Brightness.dark, // Set status bar icons to black
+    ),
+  );
+  SystemChrome.setPreferredOrientations(
+      [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+
+  /// init notification ******************************************
+  notificationAppLaunchDetails = await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+  await initLocalNotifications(flutterLocalNotificationsPlugin);
+  // WidgetsBinding.instance.addPostFrameCallback((_) {
+  FCMHelper().requestFCMIOSPermissions();
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  FCMHelper().onMessageReceived();
+  FCMHelper().initRemoteMessage();
+  FCMHelper().onTokenChange();
+  // });
+
+  /// run app
   runApp(const MyApp());
 }
 
@@ -86,7 +132,7 @@ class _MyHomePageState extends State<MyHomePage> {
   _openOptionsSheet(BuildContext context)async{
     dynamic result = await showModalBottomSheet(context: context, builder: (_)=> ServersSheet(init: selectedServer, customText: customText?.replaceAll('https://', ''),), isScrollControlled: true, useSafeArea: true);
     if(result == null) return;
-    // if(selectedServer == result['server']) return;
+    if(selectedServer == result['server']) return;
     selectedServer = result['server'];
     if(selectedServer == Server.custom){
       customText = result['customText'];

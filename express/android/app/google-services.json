@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1027939228158:android:fa212a495e094c8e5808af",
+        "mobilesdk_app_id": "1:1027939228158:android:9548692a281698425808af",
         "android_client_info": {
-          "package_name": "com.expresstracking.app"
+          "package_name": "com.express.app"
         }
       },
       "oauth_client": [],

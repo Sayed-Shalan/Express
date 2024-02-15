@@ -1,4 +1,4 @@
-package com.expresstracking.app
+package com.express.app
 
 import io.flutter.embedding.android.FlutterActivity
 

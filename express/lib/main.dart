@@ -9,6 +9,7 @@ import 'package:webviewx/webviewx.dart';
 import 'fcm/fcm_helper.dart';
 import 'fcm/local_notifications_helper.dart';
 import 'firebase_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 /// Global Vars ******************************
@@ -88,10 +89,15 @@ class _MyHomePageState extends State<MyHomePage> {
   final dio = Dio();
 
   @override
-  void initState() {
-    // TODO: implement initState
+  void initState(){
+    _init();
     super.initState();
   }
+
+  _init()async{
+    selectedServer = await getServer();
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(child: Scaffold(
@@ -108,17 +114,15 @@ class _MyHomePageState extends State<MyHomePage> {
         body: SizedBox(
           width: MediaQuery.of(context).size.width,
           height: MediaQuery.of(context).size.height,
-          child: SingleChildScrollView(
-            child: WebViewX(
-              initialContent: selectedServer == Server.custom? customText! : selectedServer.server,
-              initialSourceType: SourceType.url,
-              onWebViewCreated: (controller) => webViewController = controller,
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height - kToolbarHeight,
-              onWebResourceError: (_){},
-              onPageStarted: _handlePageChanged,
+          child: WebViewX(
+            initialContent: selectedServer == Server.custom? customText! : selectedServer.server,
+            initialSourceType: SourceType.url,
+            onWebViewCreated: (controller) => webViewController = controller,
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height - kToolbarHeight,
+            onWebResourceError: (_){},
+            onPageStarted: _handlePageChanged,
 
-            ),
           ),
         )
     ), onWillPop: ()async{
@@ -126,7 +130,7 @@ class _MyHomePageState extends State<MyHomePage> {
         webViewController.goBack();
         return Future.value(false);
       }
-      if(username?.isNotEmpty ?? false) await _removeToken(username);
+      // if(username?.isNotEmpty ?? false) await _removeToken(username);
       SystemChannels.platform.invokeMethod('SystemNavigator.pop');
       return Future.value(false);
     });
@@ -137,7 +141,9 @@ class _MyHomePageState extends State<MyHomePage> {
     dynamic result = await showModalBottomSheet(context: context, builder: (_)=> ServersSheet(init: selectedServer, customText: customText?.replaceAll('https://', ''),), isScrollControlled: true, useSafeArea: true);
     if(result == null) return;
     if(selectedServer == result['server']) return;
+    _removeToken(username);
     selectedServer = result['server'];
+    saveString(selectedServer);
     if(selectedServer == Server.custom){
       customText = result['customText'];
     }
@@ -193,6 +199,16 @@ class _MyHomePageState extends State<MyHomePage> {
     });
     debugPrint("Remove token Status --------> ${response.statusCode ?? 400}");
 
+  }
+  Future<Server> getServer() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var value =  prefs.getString('server');
+    if(value == null) return Server.track1;
+    return Server.values.firstWhere((element) => element.name == value);
+  }
+  void saveString(Server server) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('server', server.name);
   }
 }
 
